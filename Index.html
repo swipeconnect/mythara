@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>MYTHARA — The Living World</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{margin:0;background:#0b1010;color:#f2ead7;font-family:system-ui,sans-serif}
+
+header{padding:22px 18px;background:#151d19;border-bottom:1px solid #596344}
+
+h1{margin:0;color:#d9bc75;letter-spacing:3px}
+
+small{color:#aab5a1}
+
+main{max-width:680px;margin:auto;padding:18px}
+
+.card{background:#17201b;border:1px solid #354536;border-radius:16px;padding:17px;margin:14px 0}
+
+.world{background:linear-gradient(160deg,#263d32,#101918 70%);text-align:center;padding:28px 12px}
+
+.core{font-size:58px}
+
+h2{margin:4px 0 12px;color:#d9bc75}
+
+.stats{display:flex;gap:8px;flex-wrap:wrap}
+
+.stat{flex:1;min-width:90px;background:#0e1512;padding:12px;border-radius:10px}
+
+button{background:#c9a85c;color:#15160f;border:0;border-radius:10px;padding:12px;font-weight:750;cursor:pointer}
+
+button:disabled{opacity:.4}
+
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.actions button{flex:1}
+
+.item{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #344037}
+
+#message{color:#b9d7a3;min-height:24px}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+  <h1>MYTHARA</h1>
+
+  <small>THE LIVING WORLD · FIRST AWAKENING</small>
+
+</header>
+
+<main>
+
+  <section class="card world">
+
+    <div class="core">🌌</div>
+
+    <h2 id="worldName">The Whispering Forest</h2>
+
+    <p id="story">An ancient power stirs beneath the roots.</p>
+
+    <small id="mood">World state: Awakening</small>
+
+  </section>
+
+  <section class="card">
+
+    <h2>Adventurer</h2>
+
+    <div class="stats">
+
+      <div class="stat">Level<br><b id="level">1</b></div>
+
+      <div class="stat">XP<br><b id="xp">0</b></div>
+
+      <div class="stat">Energy<br><b id="energy">10</b></div>
+
+    </div>
+
+  </section>
+
+  <section class="card">
+
+    <h2>Explore & Gather</h2>
+
+    <div class="actions">
+
+      <button onclick="gather('wood')">🌲 Gather wood</button>
+
+      <button onclick="gather('iron')">⛏️ Mine iron</button>
+
+      <button onclick="gather('crystal')">💎 Find crystal</button>
+
+    </div>
+
+    <p id="message">Your adventure begins here.</p>
+
+  </section>
+
+  <section class="card">
+
+    <h2>Inventory</h2>
+
+    <div id="inventory"></div>
+
+  </section>
+
+  <section class="card">
+
+    <h2>Campfire Kitchen</h2>
+
+    <p>Wood × 3 + Iron × 1 → Ironroot stew</p>
+
+    <button onclick="craft()">🍲 Craft stew</button>
+
+    <p id="buff">No active food bonus.</p>
+
+    <button onclick="eat()">Eat stew (+20% gathering for 15 min)</button>
+
+  </section>
+
+  <section class="card">
+
+    <h2>The World Core</h2>
+
+    <p id="event">The forest is peaceful... for now.</p>
+
+    <button onclick="worldEvent()">Listen to the Core</button>
+
+    <button onclick="resetGame()">Reset adventure</button>
+
+  </section>
+
+  <small>Prototype only · Virtual items have no cash value.</small>
+
+</main>
+
+<script>
+
+const initial=()=>({
+
+ xp:0,energy:10,wood:0,iron:0,crystal:0,stew:0,
+
+ buffUntil:0,eventCount:0,lastAction:0
+
+});
+
+let s;
+
+try{
+
+ s=JSON.parse(localStorage.getItem('mythara-save'))||initial();
+
+}catch(e){s=initial()}
+
+function save(){
+
+ localStorage.setItem('mythara-save',JSON.stringify(s));
+
+ render();
+
+}
+
+function gather(type){
+
+ const now=Date.now();
+
+ if(s.energy<1){say("Rest before gathering again.");return}
+
+ if(now-s.lastAction<700){say("The world needs a moment.");return}
+
+ const buff=s.buffUntil>now?0.2:0;
+
+ const base=type==="crystal"?1:2;
+
+ const amount=Math.floor(base*(1+buff));
+
+ s[type]+=amount;s.energy--;s.xp+=5;s.lastAction=now;
+
+ say("The world yields "+amount+" "+type+". +5 XP");
+
+ save();
+
+}
+
+function craft(){
+
+ if(s.wood<3||s.iron<1){say("You need 3 wood and 1 iron.");return}
+
+ s.wood-=3;s.iron--;s.stew++;say("Ironroot stew crafted!");
+
+ save();
+
+}
+
+function eat(){
+
+ if(!s.stew){say("Craft some stew first.");return}
+
+ s.stew--;s.buffUntil=Date.now()+15*60*1000;
+
+ say("The stew's gathering bonus is active for 15 minutes.");
+
+ save();
+
+}
+
+function worldEvent(){
+
+ s.eventCount++;
+
+ const events=[
+
+ ["The forest whispers your name.","Awakening"],
+
+ ["Crystal lights appear beneath the roots.","Crystal bloom"],
+
+ ["A cold wind crosses the settlement.","Unrest"],
+
+ ["The Core senses hope in your actions.","Renewal"]
+
+ ];
+
+ const ev=events[(s.eventCount-1)%events.length];
+
+ document.getElementById("story").textContent=ev[0];
+
+ document.getElementById("mood").textContent="World state: "+ev[1];
+
+ document.getElementById("event").textContent=ev[0];
+
+ save();
+
+}
+
+function say(t){document.getElementById("message").textContent=t}
+
+function render(){
+
+ document.getElementById("xp").textContent=s.xp;
+
+ document.getElementById("level").textContent=1+Math.floor(s.xp/100);
+
+ document.getElementById("energy").textContent=s.energy;
+
+ document.getElementById("inventory").innerHTML=
+
+ ["wood","iron","crystal","stew"].map(k=>
+
+ '<div class="item"><span>'+k+'</span><b>'+s[k]+'</b></div>'
+
+ ).join("");
+
+ document.getElementById("buff").textContent=
+
+ s.buffUntil>Date.now()?"Gathering bonus active!":"No active food bonus.";
+
+}
+
+function resetGame(){
+
+ if(confirm("Delete this local test save?")){
+
+ s=initial();save();location.reload();
+
+ }
+
+}
+
+render();
+
+</script>
+
+</body>
+
+</html>
